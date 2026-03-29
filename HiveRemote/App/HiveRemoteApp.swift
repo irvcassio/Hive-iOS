@@ -8,6 +8,7 @@ struct HiveRemoteApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(config)
+                .preferredColorScheme(.light)
         }
     }
 }

@@ -5,9 +5,6 @@ import WebKit
 
 struct HiveWebViewRepresentable: UIViewRepresentable {
     let tunnelURL: String
-    let clientId: String
-    let clientSecret: String
-    let onNavigationToLogin: () -> Void
     let onLoadFinished: () -> Void
 
     @Binding var webView: WKWebView?
@@ -26,10 +23,13 @@ struct HiveWebViewRepresentable: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.scrollView.bounces = true
-        webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.allowsBackForwardNavigationGestures = true
         webView.isInspectable = true
         webView.customUserAgent = "HiveRemote/1.0 (iOS; WKWebView)"
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
 
         DispatchQueue.main.async {
             self.webView = webView
@@ -40,57 +40,15 @@ struct HiveWebViewRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    // MARK: - Coordinator (Navigation Delegate)
-
     final class Coordinator: NSObject, WKNavigationDelegate {
         let parent: HiveWebViewRepresentable
-        /// Track whether we've injected auth headers on the initial load
-        var hasInjectedAuth = false
 
         init(parent: HiveWebViewRepresentable) {
             self.parent = parent
         }
 
-        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-            guard let url = navigationAction.request.url else { return .allow }
-
-            // Detect redirect to Cloudflare Access login — cookie expired
-            let host = url.host ?? ""
-            if host.contains("cloudflareaccess.com") || url.path.contains("/cdn-cgi/access/login") {
-                parent.onNavigationToLogin()
-                return .cancel
-            }
-
-            // On the first request to our tunnel, inject service token headers.
-            // Cloudflare will validate and return Set-Cookie: CF_Authorization
-            // which WKWebView stores natively — no manual cookie injection needed.
-            let tunnelHost = URL(string: parent.tunnelURL)?.host ?? ""
-            if !hasInjectedAuth && host == tunnelHost {
-                let existingHeaders = navigationAction.request.allHTTPHeaderFields ?? [:]
-                if existingHeaders["CF-Access-Client-Id"] == nil {
-                    hasInjectedAuth = true
-                    var request = URLRequest(url: url)
-                    request.setValue(parent.clientId, forHTTPHeaderField: "CF-Access-Client-Id")
-                    request.setValue(parent.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
-                    webView.load(request)
-                    return .cancel
-                }
-            }
-
-            return .allow
-        }
-
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.onLoadFinished()
-
-            let keepaliveJS = """
-            (function() {
-                if (!window.__hiveKeepalive) {
-                    window.__hiveKeepalive = setInterval(function() {}, 30000);
-                }
-            })();
-            """
-            webView.evaluateJavaScript(keepaliveJS, completionHandler: nil)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -103,7 +61,7 @@ struct HiveWebViewRepresentable: UIViewRepresentable {
     }
 }
 
-// MARK: - Container View with Auth + Status
+// MARK: - Container View
 
 struct HiveWebViewContainer: View {
     @EnvironmentObject var config: HiveConfig
@@ -118,38 +76,57 @@ struct HiveWebViewContainer: View {
         ZStack {
             HiveWebViewRepresentable(
                 tunnelURL: config.tunnelURL,
-                clientId: config.clientId,
-                clientSecret: config.clientSecret,
-                onNavigationToLogin: handleCookieExpiry,
                 onLoadFinished: { isLoading = false },
                 webView: $webView
             )
             .ignoresSafeArea()
 
             if isLoading {
-                loadingOverlay
+                VStack(spacing: 16) {
+                    ProgressView().controlSize(.large)
+                    Text("Loading Hive...").font(.subheadline).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
             }
 
             if let error = errorMessage {
-                errorOverlay(error)
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 48)).foregroundStyle(.orange)
+                    Text("Connection Error").font(.title3.bold())
+                    Text(error).font(.subheadline).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center).padding(.horizontal, 32)
+                    Button("Retry") { loadHive() }
+                        .buttonStyle(.borderedProminent).tint(.orange)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
             }
 
             if !connectionMonitor.isConnected {
-                offlineOverlay
+                VStack(spacing: 12) {
+                    Image(systemName: "wifi.slash").font(.title)
+                    Text("No Internet Connection").font(.subheadline.bold())
+                    Text("Hive will reconnect when you're back online.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
             }
         }
+        .background(Color(red: 0.96, green: 0.94, blue: 0.90)) // Match Hive's warm bg
         .toolbar(.hidden, for: .navigationBar)
         .overlay(alignment: .bottomTrailing) {
             HStack(spacing: 12) {
                 Circle()
                     .fill(connectionMonitor.isConnected ? .green : .red)
                     .frame(width: 8, height: 8)
-
-                Button(action: reload) {
+                Button(action: { loadHive() }) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 14, weight: .medium))
                 }
-
                 Button(action: { showSettings = true }) {
                     Image(systemName: "gearshape")
                         .font(.system(size: 14, weight: .medium))
@@ -162,110 +139,26 @@ struct HiveWebViewContainer: View {
             .padding(.bottom, 20)
         }
         .task {
-            await loadHive()
+            // Wait for WKWebView to be created by makeUIView
+            while webView == nil {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            loadHive()
         }
         .onChange(of: connectionMonitor.isConnected) { _, isConnected in
-            if isConnected && errorMessage != nil {
-                Task { await loadHive() }
-            }
+            if isConnected { loadHive() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            Task { await loadHive() }
+            loadHive()
         }
     }
 
-    // MARK: - Overlays
-
-    private var loadingOverlay: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-            Text("Loading Hive...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
-    }
-
-    private func errorOverlay(_ message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.orange)
-
-            Text("Connection Error")
-                .font(.title3.bold())
-
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-
-            Button("Retry") {
-                Task { await loadHive() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.orange)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
-    }
-
-    private var offlineOverlay: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "wifi.slash")
-                .font(.title)
-            Text("No Internet Connection")
-                .font(.subheadline.bold())
-            Text("Hive will reconnect when you're back online.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
-    }
-
-    // MARK: - Loading
-
-    private func loadHive() async {
-        guard config.isConfigured, let url = config.baseURL else { return }
-
+    private func loadHive() {
+        guard let url = config.baseURL else { return }
         isLoading = true
         errorMessage = nil
 
-        // Wait for WebView to be ready
-        if webView == nil {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-        }
-
-        guard let wv = webView else {
-            errorMessage = "WebView failed to initialize"
-            isLoading = false
-            return
-        }
-
-        // Reset the coordinator's auth flag so headers get injected
-        if let coordinator = (wv.navigationDelegate as? HiveWebViewRepresentable.Coordinator) {
-            coordinator.hasInjectedAuth = false
-        }
-
-        // Just load the URL — the navigation delegate will intercept
-        // the first request and add service token headers automatically.
-        // Cloudflare returns Set-Cookie: CF_Authorization in the response,
-        // which WKWebView stores natively for all subsequent requests.
-        await MainActor.run {
-            wv.load(URLRequest(url: url))
-        }
-    }
-
-    private func handleCookieExpiry() {
-        Task { await loadHive() }
-    }
-
-    private func reload() {
-        Task { await loadHive() }
+        // Just load the URL — tunnel provides security, no auth layer needed
+        webView?.load(URLRequest(url: url))
     }
 }
