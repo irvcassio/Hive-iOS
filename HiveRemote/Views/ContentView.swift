@@ -19,5 +19,7 @@ struct ContentView: View {
                 SetupView()
             }
         }
+        .ignoresSafeArea()
+        .background(Color(red: 0.96, green: 0.94, blue: 0.90))
     }
 }
