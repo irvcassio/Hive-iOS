@@ -124,7 +124,7 @@ struct HiveWebViewContainer: View {
                 onLoadFinished: { isLoading = false },
                 webView: $webView
             )
-            .ignoresSafeArea(edges: .bottom)
+            .ignoresSafeArea()
 
             if isLoading {
                 loadingOverlay
@@ -138,29 +138,29 @@ struct HiveWebViewContainer: View {
                 offlineOverlay
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(connectionMonitor.isConnected ? .green : .red)
-                        .frame(width: 8, height: 8)
-                    Text("Hive")
-                        .font(.headline)
-                }
-            }
+        .toolbar(.hidden, for: .navigationBar)
+        .overlay(alignment: .bottomTrailing) {
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(connectionMonitor.isConnected ? .green : .red)
+                    .frame(width: 8, height: 8)
 
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 12) {
-                    Button(action: reload) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    Button(action: { showSettings = true }) {
-                        Image(systemName: "gearshape")
-                    }
+                Button(action: reload) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14, weight: .medium))
+                }
+
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14, weight: .medium))
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.trailing, 16)
+            .padding(.bottom, 20)
         }
-        .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadHive()
         }
