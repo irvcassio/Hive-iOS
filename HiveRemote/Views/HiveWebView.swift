@@ -154,11 +154,9 @@ struct HiveWebViewContainer: View {
     }
 
     private func loadHive() {
-        guard let url = config.baseURL else { return }
+        guard let url = config.baseURL, let webView else { return }
         isLoading = true
         errorMessage = nil
-
-        // Just load the URL — tunnel provides security, no auth layer needed
-        webView?.load(URLRequest(url: url))
+        webView.load(URLRequest(url: url))
     }
 }

@@ -27,7 +27,7 @@
 		91FE95E651270E2B12B0DBC0 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		A8E20EAC50F75AA7541EC916 /* HiveWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveWebView.swift; sourceTree = "<group>"; };
 		AC15935022002AAF049B58BE /* HiveConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveConfig.swift; sourceTree = "<group>"; };
-		B271E324D3EAF62BA978E72B /* HiveRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HiveRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B271E324D3EAF62BA978E72B /* HiveRemote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiveRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE7BD0F6A0B2929DCA943991 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D46E21A5BA2B7AE4632ED9A6 /* CloudflareAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudflareAuth.swift; sourceTree = "<group>"; };
 		E2CBEFBBB5FD3C3F2A4C36F0 /* HiveRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveRemoteApp.swift; sourceTree = "<group>"; };
@@ -253,7 +253,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.10;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -316,7 +316,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.10;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -329,6 +329,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = L4BZ3L6LJR;
 				INFOPLIST_FILE = HiveRemote/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -338,7 +339,7 @@
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -351,6 +352,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = L4BZ3L6LJR;
 				INFOPLIST_FILE = HiveRemote/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -360,7 +362,7 @@
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
