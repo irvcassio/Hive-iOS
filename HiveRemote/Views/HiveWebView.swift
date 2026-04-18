@@ -2,9 +2,37 @@ import SwiftUI
 import WebKit
 
 // MARK: - WKWebView Representable
+//
+// Cloudflare Access auth strategy
+// --------------------------------
+// The tunnel hostname is protected by a Cloudflare Access application with a
+// service-token policy. The iOS app must prove it holds the service token to
+// pass the edge.
+//
+// We intentionally do NOT inject CF_Authorization cookies manually into
+// `WKWebsiteDataStore` — WebKit has a long-standing timing bug where a cookie
+// set via `setCookie` or `document.cookie` is not included on the very next
+// navigation. Prior attempts (cookie injection, loadHTMLString tricks) were
+// unreliable on both iOS and Android WebViews.
+//
+// Instead, `decidePolicyFor navigationAction`:
+//   1. Sees the first request to the tunnel host with no Access cookie.
+//   2. Cancels it and re-issues the same URL with CF-Access-Client-Id and
+//      CF-Access-Client-Secret headers set on the `URLRequest`.
+//   3. Cloudflare Access validates the headers and returns
+//      `Set-Cookie: CF_Authorization=...`.
+//   4. WKWebView stores the cookie via its normal Set-Cookie path — no manual
+//      cookie store writes — and uses it for every subresource and later
+//      navigation automatically.
+//
+// If the cookie expires later, Access redirects to cloudflareaccess.com /
+// `/cdn-cgi/access/login`. We detect that redirect, cancel, and re-inject
+// headers so auth is transparent.
 
 struct HiveWebViewRepresentable: UIViewRepresentable {
     let tunnelURL: String
+    let clientId: String
+    let clientSecret: String
     let onLoadFinished: () -> Void
 
     @Binding var webView: WKWebView?
@@ -47,6 +75,44 @@ struct HiveWebViewRepresentable: UIViewRepresentable {
             self.parent = parent
         }
 
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard let url = navigationAction.request.url else { return .allow }
+
+            let host = url.host ?? ""
+            let tunnelHost = URL(string: parent.tunnelURL)?.host ?? ""
+
+            // Access login bounce (cookie expired or missing) — re-auth by
+            // re-loading the tunnel URL with service-token headers.
+            if host.contains("cloudflareaccess.com") || url.path.contains("/cdn-cgi/access/login") {
+                if let tunnel = URL(string: parent.tunnelURL) {
+                    var retry = URLRequest(url: tunnel)
+                    retry.setValue(parent.clientId, forHTTPHeaderField: "CF-Access-Client-Id")
+                    retry.setValue(parent.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+                    webView.load(retry)
+                }
+                return .cancel
+            }
+
+            // First hit to the tunnel host without our headers — cancel and
+            // re-issue with the service token so Access returns CF_Authorization.
+            if host == tunnelHost {
+                let existing = navigationAction.request.allHTTPHeaderFields ?? [:]
+                if existing["CF-Access-Client-Id"] == nil {
+                    var signed = URLRequest(url: url)
+                    signed.httpMethod = navigationAction.request.httpMethod ?? "GET"
+                    signed.setValue(parent.clientId, forHTTPHeaderField: "CF-Access-Client-Id")
+                    signed.setValue(parent.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+                    webView.load(signed)
+                    return .cancel
+                }
+            }
+
+            return .allow
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.onLoadFinished()
         }
@@ -76,6 +142,8 @@ struct HiveWebViewContainer: View {
         ZStack {
             HiveWebViewRepresentable(
                 tunnelURL: config.tunnelURL,
+                clientId: config.clientId,
+                clientSecret: config.clientSecret,
                 onLoadFinished: { isLoading = false },
                 webView: $webView
             )
@@ -139,7 +207,6 @@ struct HiveWebViewContainer: View {
             .padding(.bottom, 20)
         }
         .task {
-            // Wait for WKWebView to be created by makeUIView
             while webView == nil {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
@@ -157,6 +224,14 @@ struct HiveWebViewContainer: View {
         guard let url = config.baseURL, let webView else { return }
         isLoading = true
         errorMessage = nil
-        webView.load(URLRequest(url: url))
+        // Send service-token headers on the very first navigation.
+        // Cloudflare Access returns CF_Authorization in Set-Cookie and
+        // WKWebView reuses it for every subresource. See header comment.
+        var request = URLRequest(url: url)
+        if !config.clientId.isEmpty && !config.clientSecret.isEmpty {
+            request.setValue(config.clientId, forHTTPHeaderField: "CF-Access-Client-Id")
+            request.setValue(config.clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+        }
+        webView.load(request)
     }
 }
