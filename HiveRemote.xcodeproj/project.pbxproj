@@ -11,23 +11,27 @@
 		454C40B8CD20B7C5B54CA11A /* HiveConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC15935022002AAF049B58BE /* HiveConfig.swift */; };
 		518F19BB92769A990D4BFF77 /* ConnectionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA238777F877A4481DDD05 /* ConnectionMonitor.swift */; };
 		5F9A8B4A8F41035ECCE4DB3C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25635EC4FAF7FD0B4B9B728A /* SettingsView.swift */; };
+		77D81723DB1358AFEA9B780D /* HiveWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5426CA93BA77A1A2E5A8FA89 /* HiveWebViewController.swift */; };
 		7D293F5A4A2DA5FFCF83FD37 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ECF2AD976FB980ED8BFCAC20 /* Assets.xcassets */; };
 		8216D645BF1FEF57D70522C6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 758E57C37161FEB5C406C826 /* ContentView.swift */; };
 		83EFE36B072022306F483113 /* HiveRemoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2CBEFBBB5FD3C3F2A4C36F0 /* HiveRemoteApp.swift */; };
+		846B51DD485BBC4F984B9B86 /* NetworkResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7C622FAC93AAF1B3B40FFA /* NetworkResolver.swift */; };
 		CDEB91B69676C1A05A65BB7B /* CloudflareAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46E21A5BA2B7AE4632ED9A6 /* CloudflareAuth.swift */; };
 		F3CBCD45143CFA646EE96139 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FE95E651270E2B12B0DBC0 /* KeychainService.swift */; };
 		F9D10C5AF44DEA97F8EF841A /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7685A6B3CE2D78D8D61A1540 /* SetupView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1B7C622FAC93AAF1B3B40FFA /* NetworkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkResolver.swift; sourceTree = "<group>"; };
 		25635EC4FAF7FD0B4B9B728A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		5426CA93BA77A1A2E5A8FA89 /* HiveWebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveWebViewController.swift; sourceTree = "<group>"; };
 		5CBA238777F877A4481DDD05 /* ConnectionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionMonitor.swift; sourceTree = "<group>"; };
 		758E57C37161FEB5C406C826 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7685A6B3CE2D78D8D61A1540 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 		91FE95E651270E2B12B0DBC0 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		A8E20EAC50F75AA7541EC916 /* HiveWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveWebView.swift; sourceTree = "<group>"; };
 		AC15935022002AAF049B58BE /* HiveConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveConfig.swift; sourceTree = "<group>"; };
-		B271E324D3EAF62BA978E72B /* HiveRemote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiveRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B271E324D3EAF62BA978E72B /* HiveRemote.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HiveRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE7BD0F6A0B2929DCA943991 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D46E21A5BA2B7AE4632ED9A6 /* CloudflareAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudflareAuth.swift; sourceTree = "<group>"; };
 		E2CBEFBBB5FD3C3F2A4C36F0 /* HiveRemoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveRemoteApp.swift; sourceTree = "<group>"; };
@@ -78,6 +82,7 @@
 				D46E21A5BA2B7AE4632ED9A6 /* CloudflareAuth.swift */,
 				5CBA238777F877A4481DDD05 /* ConnectionMonitor.swift */,
 				91FE95E651270E2B12B0DBC0 /* KeychainService.swift */,
+				1B7C622FAC93AAF1B3B40FFA /* NetworkResolver.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -87,6 +92,7 @@
 			children = (
 				758E57C37161FEB5C406C826 /* ContentView.swift */,
 				A8E20EAC50F75AA7541EC916 /* HiveWebView.swift */,
+				5426CA93BA77A1A2E5A8FA89 /* HiveWebViewController.swift */,
 				25635EC4FAF7FD0B4B9B728A /* SettingsView.swift */,
 				7685A6B3CE2D78D8D61A1540 /* SetupView.swift */,
 			);
@@ -178,7 +184,9 @@
 				454C40B8CD20B7C5B54CA11A /* HiveConfig.swift in Sources */,
 				83EFE36B072022306F483113 /* HiveRemoteApp.swift in Sources */,
 				42778713887973BDC3EA9F9F /* HiveWebView.swift in Sources */,
+				77D81723DB1358AFEA9B780D /* HiveWebViewController.swift in Sources */,
 				F3CBCD45143CFA646EE96139 /* KeychainService.swift in Sources */,
+				846B51DD485BBC4F984B9B86 /* NetworkResolver.swift in Sources */,
 				5F9A8B4A8F41035ECCE4DB3C /* SettingsView.swift in Sources */,
 				F9D10C5AF44DEA97F8EF841A /* SetupView.swift in Sources */,
 			);
@@ -240,11 +248,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -304,11 +310,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -329,7 +333,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = L4BZ3L6LJR;
 				INFOPLIST_FILE = HiveRemote/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -352,7 +355,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = L4BZ3L6LJR;
 				INFOPLIST_FILE = HiveRemote/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

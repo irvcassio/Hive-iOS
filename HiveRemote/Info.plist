@@ -15,22 +15,28 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string>AccentColor</string>
-	</dict>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Hive uses your camera for video feeds and visual monitoring.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Hive scans the local network to connect directly to your Hive server when available.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Hive uses your microphone for audio monitoring and two-way communication.</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
 	</dict>
 </dict>
 </plist>

@@ -8,18 +8,15 @@ struct ContentView: View {
     var body: some View {
         Group {
             if config.isConfigured {
-                NavigationStack {
-                    HiveWebViewContainer(showSettings: $showSettings)
-                        .environmentObject(connectionMonitor)
-                        .sheet(isPresented: $showSettings) {
-                            SettingsView()
-                        }
-                }
+                HiveWebViewContainer(showSettings: $showSettings)
+                    .environmentObject(connectionMonitor)
+                    .ignoresSafeArea()
+                    .sheet(isPresented: $showSettings) {
+                        SettingsView()
+                    }
             } else {
                 SetupView()
             }
         }
-        .ignoresSafeArea()
-        .background(Color(red: 0.96, green: 0.94, blue: 0.90))
     }
 }

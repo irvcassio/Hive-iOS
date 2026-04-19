@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import WebKit
 
 final class HiveConfig: ObservableObject {
     private static let tunnelURLKey = "hive_tunnel_url"
@@ -42,5 +43,12 @@ final class HiveConfig: ObservableObject {
         KeychainService.delete(key: "cf_client_id")
         KeychainService.delete(key: "cf_client_secret")
         UserDefaults.standard.removeObject(forKey: Self.tunnelURLKey)
+        // Clear stale CF_Authorization cookies so a re-configured tunnel
+        // doesn't inherit credentials from the previous session.
+        WKWebsiteDataStore.default().removeData(
+            ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+            modifiedSince: .distantPast,
+            completionHandler: {}
+        )
     }
 }

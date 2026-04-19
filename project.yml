@@ -2,20 +2,18 @@ name: HiveRemote
 options:
   bundleIdPrefix: com.irvcassio
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "16.0"
   xcodeVersion: "16.0"
   generateEmptyDirectories: true
 
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    TARGETED_DEVICE_FAMILY: "1"
-    INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
-    INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
-    INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-    INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    TARGETED_DEVICE_FAMILY: "1,2"
     ASSETCATALOG_COMPILER_APPICON_NAME: "AppIcon"
     ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: "AccentColor"
+    INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
 
 targets:
   HiveRemote:
@@ -28,10 +26,16 @@ targets:
     info:
       path: HiveRemote/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        UILaunchScreen:
+          UIColorName: "LaunchBackground"
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
           NSAllowsArbitraryLoadsInWebContent: true
         ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: "Hive uses your camera for video feeds and visual monitoring."
+        NSMicrophoneUsageDescription: "Hive uses your microphone for audio monitoring and two-way communication."
+        NSLocalNetworkUsageDescription: "Hive scans the local network to connect directly to your Hive server when available."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.irvcassio.HiveRemote
@@ -41,4 +45,4 @@ targets:
         DEVELOPMENT_TEAM: "L4BZ3L6LJR"
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
