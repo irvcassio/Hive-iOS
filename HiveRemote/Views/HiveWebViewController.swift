@@ -1,6 +1,11 @@
 import UIKit
 import WebKit
 
+private extension UIColor {
+    // Cream background (#F5F0E6) — matches LaunchBackground asset and SwiftUI background
+    static let hiveBackground = UIColor(red: 0.961, green: 0.941, blue: 0.902, alpha: 1)
+}
+
 // MARK: - Delegate
 
 protocol HiveWebViewControllerDelegate: AnyObject {
@@ -52,7 +57,7 @@ final class HiveWebViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.96, green: 0.94, blue: 0.90, alpha: 1)
+        view.backgroundColor = .hiveBackground
         setupWebView()
         setupLoadingOverlay()
         setupErrorOverlay()
@@ -82,7 +87,7 @@ final class HiveWebViewController: UIViewController {
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .all }
     override var prefersStatusBarHidden: Bool { false }
-    override var preferredStatusBarStyle: UIStatusBarStyle { .darkContent }
+    override var preferredStatusBarStyle: UIStatusBarStyle { .default }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -121,10 +126,12 @@ final class HiveWebViewController: UIViewController {
               root.style.setProperty('--sar', 'env(safe-area-inset-right)');
 
               // Prevent horizontal overflow on narrow viewports (375pt iPhone SE).
-              // Eliminates horizontal scroll without touching the web app's layout.
-              root.style.maxWidth = '100vw';
-              root.style.overflowX = 'hidden';
-              if (document.body) document.body.style.overflowX = 'hidden';
+              // <style> injection applies the body rule lazily as the parser creates
+              // <body>, avoiding the dead-code problem of `if (document.body)` at
+              // atDocumentStart when body doesn't yet exist.
+              var s = document.createElement('style');
+              s.textContent = 'html,body{max-width:100vw!important;overflow-x:hidden!important;}';
+              (document.head || root).appendChild(s);
 
               // Viewport meta: inject if absent; otherwise patch only viewport-fit
               // so we don't override the web app's own scaling preferences.
@@ -133,7 +140,7 @@ final class HiveWebViewController: UIViewController {
                 meta = document.createElement('meta');
                 meta.name = 'viewport';
                 meta.content = '\(viewportContent)';
-                if (document.head) document.head.appendChild(meta);
+                (document.head || root).appendChild(meta);
               } else if (!meta.content.includes('viewport-fit')) {
                 meta.content += ', viewport-fit=cover';
               }
@@ -151,6 +158,7 @@ final class HiveWebViewController: UIViewController {
         // bounces = false disables both scroll bounce and pull-to-refresh.
         // If a UIRefreshControl is added later, set alwaysBounceVertical = true.
         webView.scrollView.bounces = false
+        webView.scrollView.alwaysBounceHorizontal = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         // Hide native scroll indicators; avoids double-scrollbar appearance on iPad
         // when web content also renders its own scroll UI.
@@ -188,7 +196,8 @@ final class HiveWebViewController: UIViewController {
     private func setupLoadingOverlay() {
         loadingOverlay = UIView()
         loadingOverlay.translatesAutoresizingMaskIntoConstraints = false
-        loadingOverlay.backgroundColor = UIColor(red: 0.96, green: 0.94, blue: 0.90, alpha: 1)
+        loadingOverlay.backgroundColor = .hiveBackground
+        loadingOverlay.accessibilityViewIsModal = true
 
         let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
         blurView.translatesAutoresizingMaskIntoConstraints = false
@@ -201,6 +210,7 @@ final class HiveWebViewController: UIViewController {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "Loading Hive…"
         label.font = .preferredFont(forTextStyle: .subheadline)
+        label.adjustsFontForContentSizeCategory = true
         label.textColor = .secondaryLabel
 
         let stack = UIStackView(arrangedSubviews: [spinner, label])
@@ -222,8 +232,8 @@ final class HiveWebViewController: UIViewController {
             blurView.bottomAnchor.constraint(equalTo: loadingOverlay.bottomAnchor),
             blurView.leadingAnchor.constraint(equalTo: loadingOverlay.leadingAnchor),
             blurView.trailingAnchor.constraint(equalTo: loadingOverlay.trailingAnchor),
-            stack.centerXAnchor.constraint(equalTo: loadingOverlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: loadingOverlay.centerYAnchor),
+            stack.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
         ])
     }
 
@@ -233,31 +243,36 @@ final class HiveWebViewController: UIViewController {
         errorOverlay = UIView()
         errorOverlay.translatesAutoresizingMaskIntoConstraints = false
         errorOverlay.isHidden = true
+        errorOverlay.accessibilityViewIsModal = true
 
         let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
         blurView.translatesAutoresizingMaskIntoConstraints = false
 
-        let iconView = UIImageView(image: UIImage(systemName: "exclamationmark.triangle.fill"))
+        let iconConfig = UIImage.SymbolConfiguration(textStyle: .largeTitle)
+        let iconView = UIImageView(image: UIImage(systemName: "exclamationmark.triangle.fill", withConfiguration: iconConfig))
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.tintColor = .systemOrange
         iconView.contentMode = .scaleAspectFit
+        iconView.setContentHuggingPriority(.required, for: .vertical)
 
         let titleLabel = UILabel()
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.text = "Connection Error"
-        titleLabel.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.font = .preferredFont(forTextStyle: .headline)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textAlignment = .center
 
         errorMessageLabel = UILabel()
         errorMessageLabel.translatesAutoresizingMaskIntoConstraints = false
         errorMessageLabel.font = .preferredFont(forTextStyle: .subheadline)
+        errorMessageLabel.adjustsFontForContentSizeCategory = true
         errorMessageLabel.textColor = .secondaryLabel
         errorMessageLabel.textAlignment = .center
         errorMessageLabel.numberOfLines = 0
 
         var retryConfig = UIButton.Configuration.filled()
         retryConfig.title = "Retry"
-        retryConfig.baseForegroundColor = .white
+        retryConfig.baseForegroundColor = UIColor.systemBackground
         retryConfig.baseBackgroundColor = .systemOrange
         retryConfig.cornerStyle = .medium
         let retryButton = UIButton(configuration: retryConfig)
@@ -283,12 +298,10 @@ final class HiveWebViewController: UIViewController {
             blurView.bottomAnchor.constraint(equalTo: errorOverlay.bottomAnchor),
             blurView.leadingAnchor.constraint(equalTo: errorOverlay.leadingAnchor),
             blurView.trailingAnchor.constraint(equalTo: errorOverlay.trailingAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 48),
-            iconView.heightAnchor.constraint(equalToConstant: 48),
-            stack.centerXAnchor.constraint(equalTo: errorOverlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: errorOverlay.centerYAnchor),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: errorOverlay.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: errorOverlay.trailingAnchor, constant: -32),
+            stack.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -32),
         ])
     }
 
@@ -298,25 +311,30 @@ final class HiveWebViewController: UIViewController {
         offlineOverlay = UIView()
         offlineOverlay.translatesAutoresizingMaskIntoConstraints = false
         offlineOverlay.isHidden = true
+        offlineOverlay.accessibilityViewIsModal = true
 
         let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
         blurView.translatesAutoresizingMaskIntoConstraints = false
 
-        let iconView = UIImageView(image: UIImage(systemName: "wifi.slash"))
+        let iconConfig = UIImage.SymbolConfiguration(textStyle: .title1)
+        let iconView = UIImageView(image: UIImage(systemName: "wifi.slash", withConfiguration: iconConfig))
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.tintColor = .label
         iconView.contentMode = .scaleAspectFit
+        iconView.setContentHuggingPriority(.required, for: .vertical)
 
         let titleLabel = UILabel()
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.text = "No Internet Connection"
-        titleLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
+        titleLabel.font = .preferredFont(forTextStyle: .subheadline)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.textAlignment = .center
 
         let subLabel = UILabel()
         subLabel.translatesAutoresizingMaskIntoConstraints = false
         subLabel.text = "Hive will reconnect when you're back online."
         subLabel.font = .preferredFont(forTextStyle: .caption1)
+        subLabel.adjustsFontForContentSizeCategory = true
         subLabel.textColor = .secondaryLabel
         subLabel.textAlignment = .center
         subLabel.numberOfLines = 0
@@ -340,12 +358,10 @@ final class HiveWebViewController: UIViewController {
             blurView.bottomAnchor.constraint(equalTo: offlineOverlay.bottomAnchor),
             blurView.leadingAnchor.constraint(equalTo: offlineOverlay.leadingAnchor),
             blurView.trailingAnchor.constraint(equalTo: offlineOverlay.trailingAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 32),
-            iconView.heightAnchor.constraint(equalToConstant: 32),
-            stack.centerXAnchor.constraint(equalTo: offlineOverlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: offlineOverlay.centerYAnchor),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: offlineOverlay.leadingAnchor, constant: 32),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: offlineOverlay.trailingAnchor, constant: -32),
+            stack.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -32),
         ])
     }
 
@@ -359,13 +375,15 @@ final class HiveWebViewController: UIViewController {
 
         networkBadgeLabel = UILabel()
         networkBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
-        networkBadgeLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+        networkBadgeLabel.font = .preferredFont(forTextStyle: .caption2)
+        networkBadgeLabel.adjustsFontForContentSizeCategory = true
 
         let badgeStack = UIStackView(arrangedSubviews: [networkBadgeImageView, networkBadgeLabel])
         badgeStack.translatesAutoresizingMaskIntoConstraints = false
         badgeStack.axis = .horizontal
         badgeStack.alignment = .center
         badgeStack.spacing = 3
+        badgeStack.isAccessibilityElement = true
 
         let symbolConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
 
@@ -439,6 +457,9 @@ final class HiveWebViewController: UIViewController {
         networkBadgeImageView.tintColor = color
         networkBadgeLabel.text = label
         networkBadgeLabel.textColor = color
+
+        // Update grouped accessibility label so VoiceOver reads "Network: LAN" etc.
+        networkBadgeLabel.superview?.accessibilityLabel = "Network: \(label)"
     }
 
     // MARK: - Network Mode Handling
@@ -449,7 +470,7 @@ final class HiveWebViewController: UIViewController {
         switch networkMode {
         case .resolving:
             // Only show full-screen spinner on initial load; mid-session re-probes keep WebView visible
-            if !hasLoaded { loadingOverlay.isHidden = false }
+            if !hasLoaded { showLoadingOverlay() }
             errorOverlay.isHidden = true
         case .lan(let url):
             if webView.url?.host != url.host {
@@ -468,17 +489,14 @@ final class HiveWebViewController: UIViewController {
 
         switch networkMode {
         case .resolving:
-            loadingOverlay.isHidden = false
-            errorOverlay.isHidden = true
+            showLoadingOverlay()
 
         case .lan(let url):
-            loadingOverlay.isHidden = false
-            errorOverlay.isHidden = true
+            showLoadingOverlay()
             webView.load(URLRequest(url: url))
 
         case .tunnel(let url):
-            loadingOverlay.isHidden = false
-            errorOverlay.isHidden = true
+            showLoadingOverlay()
             var request = URLRequest(url: url)
             if !clientId.isEmpty && !clientSecret.isEmpty {
                 request.setValue(clientId, forHTTPHeaderField: "CF-Access-Client-Id")
@@ -486,6 +504,12 @@ final class HiveWebViewController: UIViewController {
             }
             webView.load(request)
         }
+    }
+
+    private func showLoadingOverlay() {
+        loadingOverlay.isHidden = false
+        errorOverlay.isHidden = true
+        UIAccessibility.post(notification: .announcement, argument: "Loading Hive")
     }
     @objc private func settingsTapped() {
         delegate?.hiveWebViewControllerDidRequestSettings(self)

@@ -44,7 +44,6 @@ targets:
         NSPrivacyPolicyURL: "https://www.example.com/hive-remote-privacy"
         UIRequiredDeviceCapabilities:
           - "arm64"
-        UIRequiresFullScreen: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.irvcassio.HiveRemote
