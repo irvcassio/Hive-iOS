@@ -11,6 +11,7 @@
 		454C40B8CD20B7C5B54CA11A /* HiveConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC15935022002AAF049B58BE /* HiveConfig.swift */; };
 		518F19BB92769A990D4BFF77 /* ConnectionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA238777F877A4481DDD05 /* ConnectionMonitor.swift */; };
 		5F9A8B4A8F41035ECCE4DB3C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25635EC4FAF7FD0B4B9B728A /* SettingsView.swift */; };
+		7367D978CCE6A44175205E3B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4F0C394D4ADEF86A52829BA1 /* PrivacyInfo.xcprivacy */; };
 		77D81723DB1358AFEA9B780D /* HiveWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5426CA93BA77A1A2E5A8FA89 /* HiveWebViewController.swift */; };
 		7D293F5A4A2DA5FFCF83FD37 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ECF2AD976FB980ED8BFCAC20 /* Assets.xcassets */; };
 		8216D645BF1FEF57D70522C6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 758E57C37161FEB5C406C826 /* ContentView.swift */; };
@@ -24,6 +25,7 @@
 /* Begin PBXFileReference section */
 		1B7C622FAC93AAF1B3B40FFA /* NetworkResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkResolver.swift; sourceTree = "<group>"; };
 		25635EC4FAF7FD0B4B9B728A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		4F0C394D4ADEF86A52829BA1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5426CA93BA77A1A2E5A8FA89 /* HiveWebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HiveWebViewController.swift; sourceTree = "<group>"; };
 		5CBA238777F877A4481DDD05 /* ConnectionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionMonitor.swift; sourceTree = "<group>"; };
 		758E57C37161FEB5C406C826 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -52,6 +54,7 @@
 			children = (
 				ECF2AD976FB980ED8BFCAC20 /* Assets.xcassets */,
 				CE7BD0F6A0B2929DCA943991 /* Info.plist */,
+				4F0C394D4ADEF86A52829BA1 /* PrivacyInfo.xcprivacy */,
 				9DB2CCF5DE576FDEEB28002C /* App */,
 				FE3C4A2FBDC7E63CC6423400 /* Models */,
 				BB64BA164E24C410F6434F42 /* Services */,
@@ -168,6 +171,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7D293F5A4A2DA5FFCF83FD37 /* Assets.xcassets in Resources */,
+				7367D978CCE6A44175205E3B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,7 +334,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = L4BZ3L6LJR;
 				INFOPLIST_FILE = HiveRemote/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -352,7 +356,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = L4BZ3L6LJR;
 				INFOPLIST_FILE = HiveRemote/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -30,6 +30,7 @@ enum NetworkMode: Equatable {
     }
 }
 
+@MainActor
 final class NetworkResolver: ObservableObject {
     static let lanHostKey = "hive_lan_host"
 
@@ -48,7 +49,7 @@ final class NetworkResolver: ObservableObject {
         if !monitoring {
             monitoring = true
             pathMonitor.pathUpdateHandler = { [weak self] path in
-                DispatchQueue.main.async {
+                Task { @MainActor [weak self] in
                     guard let self else { return }
                     if path.status == .satisfied {
                         self.resolve()
@@ -63,7 +64,7 @@ final class NetworkResolver: ObservableObject {
         resolve()
     }
 
-    /// Re-probe LAN reachability and update mode. Safe to call from main thread.
+    /// Re-probe LAN reachability and update mode. Must be called on the main actor.
     func resolve() {
         resolveTask?.cancel()
         resolveTask = Task { await performResolve() }
@@ -110,7 +111,8 @@ final class NetworkResolver: ObservableObject {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 2.0
         config.timeoutIntervalForResource = 2.0
-        let session = URLSession(configuration: config, delegate: LANSSLBypass(), delegateQueue: nil)
+        let bypass = LANSSLBypass()
+        let session = URLSession(configuration: config, delegate: bypass, delegateQueue: nil)
         defer { session.invalidateAndCancel() }
 
         var request = URLRequest(url: url)
@@ -130,18 +132,33 @@ final class NetworkResolver: ObservableObject {
     }
 }
 
-// Accept self-signed TLS during LAN probing — common for local Home Assistant instances
+// Accept self-signed TLS during LAN probing, but only for hosts that are genuinely local.
+// An mDNS-spoofed redirect to a non-local host will still use the default trust evaluation.
 private final class LANSSLBypass: NSObject, URLSessionDelegate {
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
+        let host = challenge.protectionSpace.host
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-              let trust = challenge.protectionSpace.serverTrust else {
+              let trust = challenge.protectionSpace.serverTrust,
+              isLocalHost(host) else {
             completionHandler(.performDefaultHandling, nil)
             return
         }
         completionHandler(.useCredential, URLCredential(trust: trust))
     }
+}
+
+// Returns true for RFC-1918 private ranges, loopback, link-local, and .local mDNS names.
+private func isLocalHost(_ host: String) -> Bool {
+    if host.hasSuffix(".local") || host == "localhost" { return true }
+    let octets = host.split(separator: ".").compactMap { Int($0) }
+    guard octets.count == 4 else { return false }
+    return octets[0] == 10
+        || octets[0] == 127
+        || (octets[0] == 169 && octets[1] == 254)
+        || (octets[0] == 172 && (16...31).contains(octets[1]))
+        || (octets[0] == 192 && octets[1] == 168)
 }

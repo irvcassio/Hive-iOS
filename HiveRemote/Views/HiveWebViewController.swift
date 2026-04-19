@@ -448,8 +448,8 @@ final class HiveWebViewController: UIViewController {
 
         switch networkMode {
         case .resolving:
-            // Re-probing in progress — show spinner, keep current WebView content visible
-            loadingOverlay.isHidden = false
+            // Only show full-screen spinner on initial load; mid-session re-probes keep WebView visible
+            if !hasLoaded { loadingOverlay.isHidden = false }
             errorOverlay.isHidden = true
         case .lan(let url):
             if webView.url?.host != url.host {
@@ -603,6 +603,8 @@ extension HiveWebViewController: WKNavigationDelegate {
         let octets = host.split(separator: ".").compactMap { Int($0) }
         guard octets.count == 4 else { return false }
         return octets[0] == 10
+            || octets[0] == 127
+            || (octets[0] == 169 && octets[1] == 254)
             || (octets[0] == 172 && (16...31).contains(octets[1]))
             || (octets[0] == 192 && octets[1] == 168)
     }

@@ -18,6 +18,7 @@ struct ContentView: View {
                                 .environmentObject(networkResolver)
                         }
                 }
+                .ignoresSafeArea()
                 .onAppear {
                     if let url = config.baseURL {
                         networkResolver.start(tunnelURL: url)
@@ -32,7 +33,6 @@ struct ContentView: View {
                 SetupView()
             }
         }
-        .ignoresSafeArea()
         .background(Color(red: 0.96, green: 0.94, blue: 0.90))
     }
 }

@@ -68,6 +68,7 @@ struct SettingsView: View {
                 Text("You'll need to re-enter your tunnel URL and service token to reconnect.")
             }
         }
+        .onDisappear { saveLanHost() }
     }
 
     private func saveLanHost() {

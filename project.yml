@@ -49,7 +49,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.irvcassio.HiveRemote
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: "L4BZ3L6LJR"
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
