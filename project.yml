@@ -26,16 +26,25 @@ targets:
     info:
       path: HiveRemote/Info.plist
       properties:
+        CFBundleDisplayName: "Hive Remote"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         UILaunchScreen:
           UIColorName: "LaunchBackground"
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
           NSAllowsArbitraryLoadsInWebContent: true
+          NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
+        NSBonjourServices:
+          - "_http._tcp"
+          - "_https._tcp"
         NSCameraUsageDescription: "Hive uses your camera for video feeds and visual monitoring."
         NSMicrophoneUsageDescription: "Hive uses your microphone for audio monitoring and two-way communication."
         NSLocalNetworkUsageDescription: "Hive scans the local network to connect directly to your Hive server when available."
+        NSPrivacyPolicyURL: "https://www.example.com/hive-remote-privacy"
+        UIRequiredDeviceCapabilities:
+          - "arm64"
+        UIRequiresFullScreen: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.irvcassio.HiveRemote

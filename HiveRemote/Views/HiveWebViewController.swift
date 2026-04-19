@@ -11,7 +11,7 @@ protocol HiveWebViewControllerDelegate: AnyObject {
 
 final class HiveWebViewController: UIViewController {
 
-    // MARK: - Configuration (set before/after view loads)
+    // MARK: - Configuration (set by SwiftUI bridge via updateUIViewController)
 
     var tunnelURL: String = ""
     var clientId: String = ""
@@ -24,6 +24,14 @@ final class HiveWebViewController: UIViewController {
         }
     }
 
+    /// Updated by the SwiftUI bridge whenever NetworkResolver resolves a new path.
+    var networkMode: NetworkMode = .resolving {
+        didSet {
+            guard isViewLoaded, oldValue != networkMode else { return }
+            handleNetworkModeChange()
+        }
+    }
+
     weak var delegate: HiveWebViewControllerDelegate?
 
     // MARK: - Subviews
@@ -33,7 +41,8 @@ final class HiveWebViewController: UIViewController {
     private var errorOverlay: UIView!
     private var offlineOverlay: UIView!
     private var errorMessageLabel: UILabel!
-    private var statusDot: UIView!
+    private var networkBadgeImageView: UIImageView!
+    private var networkBadgeLabel: UILabel!
 
     // MARK: - State
 
@@ -83,27 +92,48 @@ final class HiveWebViewController: UIViewController {
 
     private func setupWebView() {
         let config = WKWebViewConfiguration()
+        // .default() is the persistent store — CF_Authorization cookies survive
+        // app backgrounding, relaunches, and foreground/background cycles.
         config.websiteDataStore = .default()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
-        // Inject safe-area CSS variables and viewport-fit=cover at document
-        // start so web content never renders without them, including on
-        // hash-routing and history.pushState navigations in SPAs.
-        let safeAreaScript = WKUserScript(
+        // Build viewport content at compile time.
+        // To allow user pinch-to-zoom, add ENABLE_PINCH_TO_ZOOM to
+        // Build Settings → Swift Compiler – Custom Flags → Active Compilation Conditions.
+        #if ENABLE_PINCH_TO_ZOOM
+        let viewportContent = "width=device-width, initial-scale=1, viewport-fit=cover"
+        #else
+        let viewportContent = "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        #endif
+
+        // Injected at document start so it runs before any web-app JS, including
+        // on hash-routing and history.pushState navigations in SPAs.
+        let setupScript = WKUserScript(
             source: """
             (function() {
               var root = document.documentElement;
+
+              // Safe-area CSS custom properties — consumed by web-app layout
               root.style.setProperty('--sat', 'env(safe-area-inset-top)');
               root.style.setProperty('--sab', 'env(safe-area-inset-bottom)');
               root.style.setProperty('--sal', 'env(safe-area-inset-left)');
               root.style.setProperty('--sar', 'env(safe-area-inset-right)');
+
+              // Prevent horizontal overflow on narrow viewports (375pt iPhone SE).
+              // Eliminates horizontal scroll without touching the web app's layout.
+              root.style.maxWidth = '100vw';
+              root.style.overflowX = 'hidden';
+              if (document.body) document.body.style.overflowX = 'hidden';
+
+              // Viewport meta: inject if absent; otherwise patch only viewport-fit
+              // so we don't override the web app's own scaling preferences.
               var meta = document.querySelector('meta[name="viewport"]');
               if (!meta) {
                 meta = document.createElement('meta');
                 meta.name = 'viewport';
-                meta.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
-                document.head && document.head.appendChild(meta);
+                meta.content = '\(viewportContent)';
+                if (document.head) document.head.appendChild(meta);
               } else if (!meta.content.includes('viewport-fit')) {
                 meta.content += ', viewport-fit=cover';
               }
@@ -112,18 +142,30 @@ final class HiveWebViewController: UIViewController {
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         )
-        config.userContentController.addUserScript(safeAreaScript)
+        config.userContentController.addUserScript(setupScript)
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.translatesAutoresizingMaskIntoConstraints = false
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        // bounces = false disables both scroll bounce and pull-to-refresh.
+        // If a UIRefreshControl is added later, set alwaysBounceVertical = true.
         webView.scrollView.bounces = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+        // Hide native scroll indicators; avoids double-scrollbar appearance on iPad
+        // when web content also renders its own scroll UI.
+        webView.scrollView.showsHorizontalScrollIndicator = false
+        webView.scrollView.showsVerticalScrollIndicator = false
         webView.allowsBackForwardNavigationGestures = true
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
+
+        // Pinch-to-zoom disabled by default — web app controls its own scaling.
+        // Toggle via ENABLE_PINCH_TO_ZOOM in Active Compilation Conditions.
+        #if !ENABLE_PINCH_TO_ZOOM
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+        #endif
 
         #if DEBUG
         if #available(iOS 16.4, *) {
@@ -132,7 +174,7 @@ final class HiveWebViewController: UIViewController {
         #endif
 
         view.addSubview(webView)
-        // Full-bleed — safe areas handled via CSS env() injection after load
+        // Full-bleed — safe areas communicated to web content via CSS env() vars above
         NSLayoutConstraint.activate([
             webView.topAnchor.constraint(equalTo: view.topAnchor),
             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -310,10 +352,20 @@ final class HiveWebViewController: UIViewController {
     // MARK: - Control Capsule
 
     private func setupControlCapsule() {
-        statusDot = UIView()
-        statusDot.translatesAutoresizingMaskIntoConstraints = false
-        statusDot.backgroundColor = .systemGreen
-        statusDot.layer.cornerRadius = 4
+        // Network mode badge: shows LAN / Cloud / resolving
+        networkBadgeImageView = UIImageView()
+        networkBadgeImageView.translatesAutoresizingMaskIntoConstraints = false
+        networkBadgeImageView.contentMode = .scaleAspectFit
+
+        networkBadgeLabel = UILabel()
+        networkBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
+        networkBadgeLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+
+        let badgeStack = UIStackView(arrangedSubviews: [networkBadgeImageView, networkBadgeLabel])
+        badgeStack.translatesAutoresizingMaskIntoConstraints = false
+        badgeStack.axis = .horizontal
+        badgeStack.alignment = .center
+        badgeStack.spacing = 3
 
         let symbolConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
 
@@ -331,7 +383,7 @@ final class HiveWebViewController: UIViewController {
         settingsButton.accessibilityLabel = "Settings"
         settingsButton.addTarget(self, action: #selector(settingsTapped), for: .touchUpInside)
 
-        let row = UIStackView(arrangedSubviews: [statusDot, refreshButton, settingsButton])
+        let row = UIStackView(arrangedSubviews: [badgeStack, refreshButton, settingsButton])
         row.translatesAutoresizingMaskIntoConstraints = false
         row.axis = .horizontal
         row.alignment = .center
@@ -346,60 +398,108 @@ final class HiveWebViewController: UIViewController {
         view.addSubview(capsule)
 
         NSLayoutConstraint.activate([
-            statusDot.widthAnchor.constraint(equalToConstant: 8),
-            statusDot.heightAnchor.constraint(equalToConstant: 8),
-            // 44pt minimum touch target per HIG
-            refreshButton.widthAnchor.constraint(equalToConstant: 44),
-            refreshButton.heightAnchor.constraint(equalToConstant: 44),
-            settingsButton.widthAnchor.constraint(equalToConstant: 44),
-            settingsButton.heightAnchor.constraint(equalToConstant: 44),
-            row.topAnchor.constraint(equalTo: capsule.contentView.topAnchor),
-            row.bottomAnchor.constraint(equalTo: capsule.contentView.bottomAnchor),
-            row.leadingAnchor.constraint(equalTo: capsule.contentView.leadingAnchor, constant: 10),
-            row.trailingAnchor.constraint(equalTo: capsule.contentView.trailingAnchor, constant: -10),
+            networkBadgeImageView.widthAnchor.constraint(equalToConstant: 11),
+            networkBadgeImageView.heightAnchor.constraint(equalToConstant: 11),
+            row.topAnchor.constraint(equalTo: capsule.contentView.topAnchor, constant: 10),
+            row.bottomAnchor.constraint(equalTo: capsule.contentView.bottomAnchor, constant: -10),
+            row.leadingAnchor.constraint(equalTo: capsule.contentView.leadingAnchor, constant: 14),
+            row.trailingAnchor.constraint(equalTo: capsule.contentView.trailingAnchor, constant: -14),
             // Anchored to safe area so it stays above home indicator on all devices
             capsule.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             capsule.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
         ])
 
-        // Subtle shadow to ensure visibility against light backgrounds
-        capsule.layer.shadowColor = UIColor.black.cgColor
-        capsule.layer.shadowOpacity = 0.10
-        capsule.layer.shadowRadius = 4
-        capsule.layer.shadowOffset = CGSize(width: 0, height: 2)
+        updateNetworkBadge()
     }
 
+    // MARK: - Network Badge
+
+    private func updateNetworkBadge() {
+        let symbolName: String
+        let label: String
+        let color: UIColor
+
+        switch networkMode {
+        case .resolving:
+            symbolName = "antenna.radiowaves.left.and.right"
+            label = "..."
+            color = .secondaryLabel
+        case .lan:
+            symbolName = "wifi"
+            label = "LAN"
+            color = .systemGreen
+        case .tunnel:
+            symbolName = "cloud"
+            label = "Cloud"
+            color = .systemBlue
+        }
+
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        networkBadgeImageView.image = UIImage(systemName: symbolName, withConfiguration: symbolConfig)
+        networkBadgeImageView.tintColor = color
+        networkBadgeLabel.text = label
+        networkBadgeLabel.textColor = color
+    }
+
+    // MARK: - Network Mode Handling
+
+    private func handleNetworkModeChange() {
+        updateNetworkBadge()
+
+        switch networkMode {
+        case .resolving:
+            // Re-probing in progress — show spinner, keep current WebView content visible
+            loadingOverlay.isHidden = false
+            errorOverlay.isHidden = true
+        case .lan(let url):
+            if webView.url?.host != url.host {
+                loadHive()
+            }
+        case .tunnel(let url):
+            if webView.url?.host != url.host {
+                loadHive()
+            }
+        }
+    }
     // MARK: - Actions
 
     @objc func loadHive() {
-        guard !tunnelURL.isEmpty, let url = URL(string: tunnelURL) else {
-            loadingOverlay?.isHidden = true
-            return
-        }
-        loadingOverlay.isHidden = false
-        errorOverlay.isHidden = true
-        var request = URLRequest(url: url)
-        if !clientId.isEmpty && !clientSecret.isEmpty {
-            request.setValue(clientId, forHTTPHeaderField: "CF-Access-Client-Id")
-            request.setValue(clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
-        }
-        webView.load(request)
-    }
+        guard isViewLoaded else { return }
 
+        switch networkMode {
+        case .resolving:
+            loadingOverlay.isHidden = false
+            errorOverlay.isHidden = true
+
+        case .lan(let url):
+            loadingOverlay.isHidden = false
+            errorOverlay.isHidden = true
+            webView.load(URLRequest(url: url))
+
+        case .tunnel(let url):
+            loadingOverlay.isHidden = false
+            errorOverlay.isHidden = true
+            var request = URLRequest(url: url)
+            if !clientId.isEmpty && !clientSecret.isEmpty {
+                request.setValue(clientId, forHTTPHeaderField: "CF-Access-Client-Id")
+                request.setValue(clientSecret, forHTTPHeaderField: "CF-Access-Client-Secret")
+            }
+            webView.load(request)
+        }
+    }
     @objc private func settingsTapped() {
         delegate?.hiveWebViewControllerDidRequestSettings(self)
     }
 
     @objc private func appWillEnterForeground() {
-        guard isNetworkConnected else { return }
-        loadHive()
+        // loadHive() will be triggered via handleNetworkModeChange when NetworkResolver settles.
     }
 
     // MARK: - Connectivity
 
     private func updateOfflineOverlay(animated: Bool) {
         let show = !isNetworkConnected
-        statusDot.backgroundColor = isNetworkConnected ? .systemGreen : .systemRed
+        // NetworkResolver re-probes and calls handleNetworkModeChange → loadHive when connectivity is restored.
         if animated {
             UIView.animate(withDuration: 0.3) {
                 self.offlineOverlay.alpha = show ? 1 : 0
@@ -422,6 +522,21 @@ final class HiveWebViewController: UIViewController {
 // MARK: - WKNavigationDelegate
 
 extension HiveWebViewController: WKNavigationDelegate {
+
+    // Accept self-signed TLS on LAN hosts (common for local Home Assistant instances)
+    func webView(
+        _ webView: WKWebView,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust,
+              isLocalHost(challenge.protectionSpace.host) else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        completionHandler(.useCredential, URLCredential(trust: trust))
+    }
 
     func webView(
         _ webView: WKWebView,
@@ -481,6 +596,15 @@ extension HiveWebViewController: WKNavigationDelegate {
         loadingOverlay.isHidden = true
         errorOverlay.isHidden = false
         errorMessageLabel.text = message
+    }
+
+    private func isLocalHost(_ host: String) -> Bool {
+        if host.hasSuffix(".local") || host == "localhost" { return true }
+        let octets = host.split(separator: ".").compactMap { Int($0) }
+        guard octets.count == 4 else { return false }
+        return octets[0] == 10
+            || (octets[0] == 172 && (16...31).contains(octets[1]))
+            || (octets[0] == 192 && octets[1] == 168)
     }
 }
 

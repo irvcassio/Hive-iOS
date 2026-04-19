@@ -3,20 +3,36 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var config: HiveConfig
     @StateObject private var connectionMonitor = ConnectionMonitor()
+    @StateObject private var networkResolver = NetworkResolver()
     @State private var showSettings = false
 
     var body: some View {
         Group {
             if config.isConfigured {
-                HiveWebViewContainer(showSettings: $showSettings)
-                    .environmentObject(connectionMonitor)
-                    .ignoresSafeArea()
-                    .sheet(isPresented: $showSettings) {
-                        SettingsView()
+                NavigationStack {
+                    HiveWebViewContainer(showSettings: $showSettings)
+                        .environmentObject(connectionMonitor)
+                        .environmentObject(networkResolver)
+                        .sheet(isPresented: $showSettings) {
+                            SettingsView()
+                                .environmentObject(networkResolver)
+                        }
+                }
+                .onAppear {
+                    if let url = config.baseURL {
+                        networkResolver.start(tunnelURL: url)
                     }
+                }
+                .onChange(of: config.tunnelURL) { _ in
+                    if let url = config.baseURL {
+                        networkResolver.start(tunnelURL: url)
+                    }
+                }
             } else {
                 SetupView()
             }
         }
+        .ignoresSafeArea()
+        .background(Color(red: 0.96, green: 0.94, blue: 0.90))
     }
 }

@@ -2,8 +2,10 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var config: HiveConfig
+    @EnvironmentObject var networkResolver: NetworkResolver
     @Environment(\.dismiss) private var dismiss
     @State private var showDisconnectAlert = false
+    @State private var lanHost: String = UserDefaults.standard.string(forKey: NetworkResolver.lanHostKey) ?? "hive.local"
 
     var body: some View {
         NavigationStack {
@@ -22,6 +24,23 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    HStack {
+                        Text("LAN Host")
+                        Spacer()
+                        TextField("hive.local", text: $lanHost)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(.secondary)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .onSubmit { saveLanHost() }
+                    }
+                } header: {
+                    Text("Local Network")
+                } footer: {
+                    Text("When reachable, Hive connects directly to this host instead of the Cloudflare tunnel. Port 8123 (Home Assistant default) is tried first.")
+                }
+
+                Section {
                     Button("Disconnect", role: .destructive) {
                         showDisconnectAlert = true
                     }
@@ -33,7 +52,10 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        saveLanHost()
+                        dismiss()
+                    }
                 }
             }
             .alert("Disconnect from Hive?", isPresented: $showDisconnectAlert) {
@@ -46,6 +68,12 @@ struct SettingsView: View {
                 Text("You'll need to re-enter your tunnel URL and service token to reconnect.")
             }
         }
+    }
+
+    private func saveLanHost() {
+        let trimmed = lanHost.trimmingCharacters(in: .whitespacesAndNewlines)
+        UserDefaults.standard.set(trimmed, forKey: NetworkResolver.lanHostKey)
+        networkResolver.resolve()
     }
 
     private func maskedString(_ value: String) -> String {
